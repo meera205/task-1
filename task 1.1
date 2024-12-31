@@ -1,0 +1,52 @@
+!pip install pandas matplotlib seaborn nltk
+!pip install textblob
+import pandas as pd
+
+df = pd.read_csv('sentimentdataset.csv')
+df['Timestamp'] = pd.to_datetime(df['Timestamp'])
+print(df.head())
+from textblob import TextBlob
+import nltk
+nltk.download('stopwords')
+from nltk.corpus import stopwords
+
+def clean_text(text):
+    text = text.lower()
+    text = ''.join(word for word in text if word.isalnum() or word.isspace())
+    return ' '.join(word for word in text.split() if word not in stopwords.words('english'))
+
+
+df['Cleaned_Text'] = df['Text'].apply(clean_text)
+
+
+def get_sentiment_score(text):
+    return TextBlob(text).sentiment.polarity
+
+df['Sentiment_Score'] = df['Cleaned_Text'].apply(get_sentiment_score)
+
+print(df[['Text', 'Sentiment', 'Sentiment_Score']])
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+
+df['Date'] = df['Timestamp'].dt.date
+daily_sentiment = df.groupby('Date')['Sentiment_Score'].mean().reset_index()
+
+plt.figure(figsize=(12, 6))
+sns.lineplot(data=daily_sentiment, x='Date', y='Sentiment_Score', marker='o')
+plt.title('Daily Sentiment Trends')
+plt.xlabel('Date')
+plt.ylabel('Average Sentiment Score')
+plt.xticks(rotation=45)
+plt.grid()
+plt.show()
+
+platform_sentiment = df.groupby('Platform')['Sentiment_Score'].mean().reset_index()
+
+plt.figure(figsize=(10, 6))
+sns.barplot(data=platform_sentiment, x='Platform', y='Sentiment_Score', palette='coolwarm')
+plt.title('Average Sentiment Score by Platform')
+plt.ylabel('Average Sentiment Score')
+plt.xlabel('Platform')
+plt.show()
+df.to_csv('processed_social_media_data.csv', index=False)
